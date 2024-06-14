@@ -4,7 +4,7 @@
 This application is a serverless event processing system built using AWS services and the Serverless Framework. It processes events from AWS S3 / AWS SQS, transforms the data, and stores the results in Amazon DynamoDB.
 
 ## Architecture Diagram
-![Architecture Diagram](https://lucid.app/lucidspark/17acde74-431e-46f0-bada-cd2748b77d9b/edit?viewport_loc=-254%2C-264%2C3003%2C1699%2C0_0&invitationId=inv_ca41e3d9-357a-4f48-822d-059816fade47)
+![Architecture Diagram](https://drive.google.com/file/d/1lqcy0MzzJEtvUUrqDq4k0zpsJj33DvE4/view)
 
 ### Architecture Explanation
 1. **AWS S3**: Triggers a Lambda function on new file uploads.
