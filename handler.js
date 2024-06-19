@@ -1,45 +1,75 @@
 const AWS = require('aws-sdk');
-const dynamoDB = new AWS.DynamoDB.DocumentClient();
+const dynamoDb = new AWS.DynamoDB.DocumentClient();
+const uuid = require('uuid');
 
-//S3 event 
-module.exports.processS3Event = async (event) => {
-  console.log('S3 Event:', JSON.stringify(event, null, 2));
-  const records = event.Records.map(record => {
-    const transformedData = {
-      ID: record.s3.object.key,
-      data: record.s3.object.size 
-    };
-    return transformedData;
-  });
+//For s3 bucket event
+module.exports.s3Handler = async (event) => {
+  const record = event.Records[0];
+  const bucket = record.s3.bucket.name;
+  const key = decodeURIComponent(record.s3.object.key.replace(/\+/g, ' '));
 
-  for (const record of records) {
-    await dynamoDB.put({
-      TableName: 'TransformedData',
-      Item: record
-    }).promise();
+  // Get the file extension
+  const fileExtension = key.split('.').pop().toLowerCase();
+
+  if (fileExtension !== 'json') {
+    console.log(`Skipping non-JSON file: ${key}`);
+    return { status: 'skipped', reason: 'non-JSON file' };
   }
 
-  return { status: 'done' };
+  try {
+    // Get the file content from S3
+    const s3 = new AWS.S3();
+    const params = {
+      Bucket: bucket,
+      Key: key
+    };
+    const data = await s3.getObject(params).promise();
+    const fileContent = JSON.parse(data.Body.toString());
+  
+    // Transformation logic: Extract specific fields and add a timestamp
+    const transformedData = {
+      id: uuid.v4(),
+      name: fileContent.name,
+      email: fileContent.email,
+      timestamp: new Date().toISOString(),
+      source: 's3',
+      bucket: bucket,
+      key: key
+    };
+  
+    // Store the transformed data in DynamoDB
+    const dbParams = {
+      TableName: 'ProcessedDataTable',
+      Item: transformedData
+    };
+    await dynamoDb.put(dbParams).promise();
+  
+    return { status: 'success' };
+  } catch (error) {
+      console.error(`Error processing file ${key}:`, error);
+      return { status: 'error', errorMessage: error.message };
+  }
 };
 
-//SQS event
-module.exports.processSQSEvent = async (event) => {
-  console.log('SQS Event:', JSON.stringify(event, null, 2));
-  const records = event.Records.map(record => {
-    const body = JSON.parse(record.body);
-    const transformedData = {
-      ID: record.messageId,
-      data: body 
+
+//For sqs event
+module.exports.sqsHandler = async (event) => {
+  for (const record of event.Records) {
+    const body = record.body;
+
+    // Implement your transformation logic here
+
+    const params = {
+      TableName: 'ProcessedDataTable',
+      Item: {
+        id: uuid.v4(),
+        source: 'sqs',
+        message: body,
+        transformedData: 'transformed-data'
+      }
     };
-    return transformedData;
-  });
 
-  for (const record of records) {
-    await dynamoDB.put({
-      TableName: 'TransformedData',
-      Item: record
-    }).promise();
+    await dynamoDb.put(params).promise();
   }
-
-  return { status: 'done' };
+  return { status: 'success' };
 };

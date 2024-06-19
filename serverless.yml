@@ -1,15 +1,17 @@
-service: serverless-event-processing
+service: serverless-event-processing-new
 
 provider:
   name: aws
   runtime: nodejs20.x
   region: us-east-1
+  environment:
+    DYNAMODB_TABLE: ProcessedDataTable
   iamRoleStatements:
     - Effect: "Allow"
       Action:
         - "s3:*"
         - "sqs:*"
-        - "dynamodb:*"
+        - "dynamodb:PutItem"
         - "logs:*"
         - "cloudwatch:*"
       Resource: "*"
@@ -20,15 +22,15 @@ plugins:
   - serverless-plugin-include-dependencies
 
 functions:
-  processS3Event:
-    handler: handler.processS3Event
+  s3Handler:
+    handler: handler.s3Handler
     events:
       - s3:
-          bucket: ruwan-bucket-2
+          bucket: my-upload-bucket-1
           event: s3:ObjectCreated:*
 
-  processSQSEvent:
-    handler: handler.processSQSEvent
+  sqsHandler:
+    handler: handler.sqsHandler
     events:
       - sqs:
           arn:
@@ -39,20 +41,20 @@ functions:
 resources:
   Resources:
     MyQueue:
-      Type: "AWS::SQS::Queue"
+      Type: AWS::SQS::Queue
       Properties:
-        QueueName: my-queue
+        QueueName: MyQueue
 
-    MyDynamoDBTable:
-      Type: "AWS::DynamoDB::Table"
+    ProcessedDataTable:
+      Type: AWS::DynamoDB::Table
       Properties:
-        TableName: "TransformedData"
+        TableName: ProcessedDataTable
         AttributeDefinitions:
-          - AttributeName: "ID"
-            AttributeType: "S"
+          - AttributeName: id
+            AttributeType: S
         KeySchema:
-          - AttributeName: "ID"
-            KeyType: "HASH"
+          - AttributeName: id
+            KeyType: HASH
         ProvisionedThroughput:
-          ReadCapacityUnits: 5
-          WriteCapacityUnits: 5
+          ReadCapacityUnits: 1
+          WriteCapacityUnits: 1

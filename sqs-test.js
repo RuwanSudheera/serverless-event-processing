@@ -2,7 +2,7 @@ const AWS = require('aws-sdk');
 const sqs = new AWS.SQS({ region: 'us-east-1' });
 
 const params = {
-  QueueUrl: 'https://sqs.us-east-1.amazonaws.com/211125446878/my-queue',
+  QueueUrl: 'https://sqs.us-east-1.amazonaws.com/211125446878/MyQueue',
   MessageBody: 'Hello from SQS!',
 };
 
