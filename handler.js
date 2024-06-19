@@ -55,20 +55,26 @@ module.exports.s3Handler = async (event) => {
 //For sqs event
 module.exports.sqsHandler = async (event) => {
   for (const record of event.Records) {
-    const body = record.body;
+    const body = JSON.parse(record.body);
 
-    // Implement your transformation logic here
-
-    const params = {
-      TableName: 'ProcessedDataTable',
-      Item: {
-        id: uuid.v4(),
-        source: 'sqs',
-        message: body,
-        transformedData: 'transformed-data'
-      }
+    // Transformation logic: Calculate total order value and add metadata
+    const totalOrderValue = body.items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+    const transformedData = {
+      id: uuid.v4(),
+      orderId: body.orderId,
+      customerId: body.customerId,
+      totalOrderValue: totalOrderValue,
+      itemCount: body.items.length,
+      processedAt: new Date().toISOString(),
+      source: 'sqs',
+      message: body
     };
 
+    // Store the transformed data in DynamoDB
+    const params = {
+      TableName: 'ProcessedDataTable',
+      Item: transformedData
+    };
     await dynamoDb.put(params).promise();
   }
   return { status: 'success' };
